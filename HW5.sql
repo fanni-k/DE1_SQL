@@ -21,12 +21,13 @@ BEGIN
 	DECLARE phone varchar(50) DEFAULT "x";
 	DECLARE customerNumber INT DEFAULT 0;
     	DECLARE country varchar(50) DEFAULT "";
-        DECLARE areacode varchar(50) DEFAULT 0;
+        DECLARE areacode varchar(50) DEFAULT "";
+        DECLARE city varchar (50) DEFAULT "";
 
 	-- declare cursor for customer
 	DECLARE curPhone
 		CURSOR FOR 
-            		SELECT customers.customerNumber, customers.phone, customers.country  
+            		SELECT customers.customerNumber, customers.phone, customers.country, customers.city  
 				FROM classicmodels.customers;
 
 	-- declare NOT FOUND handler
@@ -40,14 +41,8 @@ DROP TABLE IF EXISTS classicmodels.fixed_customers;
 	CREATE TABLE classicmodels.fixed_customers LIKE classicmodels.customers;
 	INSERT fixed_customers SELECT * FROM classicmodels.customers;
     
-  -- insert area codes into 'fixed_customers' table with LEFT JOIN
-    
-    SELECT * FROM classicmodels.fixed_customers
-    LEFT JOIN areaCodes
-    USING (city);
-    
-	fixPhone: LOOP
-		FETCH curPhone INTO customerNumber, phone, country;
+		fixPhone: LOOP
+		FETCH curPhone INTO customerNumber, phone, country, city;
 		IF finished = 1 THEN 
 			LEAVE fixPhone;
 		END IF;
@@ -61,16 +56,16 @@ DROP TABLE IF EXISTS classicmodels.fixed_customers;
                     UPDATE classicmodels.fixed_customers
                     SET fixed_customers.phone=phone 
 							WHERE fixed_customers.customerNumber = customerNumber;
-                    ELSE IF LENGTH(phone) = 7 THEN
-                    SET  phone = CONCAT('+1',phone);
+                    ELSEIF LENGTH(phone) = 7 THEN
+                    SET areacode = (SELECT areacodes.AreaCode FROM areacodes WHERE areacodes.city = city);
+                    SET phone = CONCAT('+1', areacode, phone);
 					UPDATE classicmodels.fixed_customers 
 						SET fixed_customers.phone=phone 
 							WHERE fixed_customers.customerNumber = customerNumber;
                 		END IF;    
 			END IF;
        		 END IF;
-             END IF;
-
+             
 	END LOOP fixPhone;
 	CLOSE curPhone;
 
